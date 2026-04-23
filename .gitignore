@@ -7,6 +7,9 @@
 [Ll]ogs/
 [Uu]ser[Ss]ettings/
 
+#Bat
+Update Git.cmd
+
 # MemoryCaptures and AssetBundle folders
 MemoryCaptures/
 AssetBundles/
