@@ -1,93 +1,87 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.IO;
 using UnityEngine;
 
 public class Walking : MonoBehaviour
 {
-   public float distance = 0.1f;
+    public float distance = 0.1f;
 
-   public GameObject Hand;
-   public ConfigurableJoint HandJoint;
-   public Rigidbody enpty2;
-   public Rigidbody Player;
+    public GameObject Hand;
+    public ConfigurableJoint HandJoint;
+    public Rigidbody enpty2;
+    public Rigidbody Player;
 
-   public LayerMask layer;
+    public LayerMask layer;
 
-   public bool climbEnabled;
+    public bool climbEnabled;
 
-   public KeyCode grabKey = KeyCode.Mouse0;
+    public KeyCode grabKey = KeyCode.Mouse0;
 
-   private ConfigurableJoint grabJoint;
-   private ConfigurableJoint grabJoint2;
+    private ConfigurableJoint grabJoint;
+    private ConfigurableJoint grabJoint2;
 
-   void FixedUpdate()
-   {
-       HandJoint.targetPosition = Hand.transform.position;
+    void FixedUpdate()
+    {
+        HandJoint.targetPosition = Hand.transform.localPosition;
 
-       if (Input.GetKey(grabKey))
-       {
-           Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
-           RaycastHit hit;
+        if (Input.GetKey(grabKey))
+        {
+            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            RaycastHit hit;
 
-           if (Physics.Raycast(ray, out hit, distance, layer))
-           {
-               //if (hit.rigidbody == null) return;
+            if (Physics.Raycast(ray, out hit, distance, layer))
+            {
+                climbEnabled = true;
 
-               climbEnabled = true;
+                if (grabJoint == null)
+                {
+                    grabJoint = HandJoint.gameObject.AddComponent<ConfigurableJoint>();
+                    grabJoint.autoConfigureConnectedAnchor = false;
+                    grabJoint.connectedBody = enpty2;
 
-               if (grabJoint == null)
-               {
-                   Hand.transform.position = hit.point;
-                   HandJoint.transform.position = Hand.transform.position;
+                    // Фикс: используем локальное смещение относительно руки
+                    grabJoint.anchor = Vector3.zero;
+                    // Фикс: переводим мировую точку в локальные координаты enpty2
+                    grabJoint.connectedAnchor = enpty2.transform.InverseTransformPoint(hit.point);
 
-                   grabJoint = HandJoint.gameObject.AddComponent<ConfigurableJoint>();
+                    grabJoint.xMotion = ConfigurableJointMotion.Locked;
+                    grabJoint.yMotion = ConfigurableJointMotion.Locked;
+                    grabJoint.zMotion = ConfigurableJointMotion.Locked;
+                    grabJoint.angularXMotion = ConfigurableJointMotion.Locked;
+                    grabJoint.angularYMotion = ConfigurableJointMotion.Locked;
+                    grabJoint.angularZMotion = ConfigurableJointMotion.Locked;
 
-                   grabJoint.autoConfigureConnectedAnchor = false;
+                    JointDrive drive = new JointDrive
+                    {
+                        positionSpring = 50000f,
+                        positionDamper = 50000f,
+                        maximumForce = Mathf.Infinity
+                    };
+                    grabJoint.xDrive = drive;
+                    grabJoint.yDrive = drive;
+                    grabJoint.zDrive = drive;
+                }
+            }
+        }
+        else if (climbEnabled)
+        {
+            climbEnabled = false;
+            Hand.transform.localPosition = Vector3.zero;
+            HandJoint.targetPosition = Vector3.zero;
 
-                   grabJoint.connectedBody = enpty2;
+            if (grabJoint != null)
+            {
+                Destroy(grabJoint);
+            }
+        }
+    }
 
-                   grabJoint.xMotion = ConfigurableJointMotion.Locked;
-                   grabJoint.yMotion = ConfigurableJointMotion.Locked;
-                   grabJoint.zMotion = ConfigurableJointMotion.Locked;
+    private void OnDrawGizmosSelected()
+    {
+        if (Camera.main == null) return;
 
-                   grabJoint.angularXMotion = ConfigurableJointMotion.Locked;
-                   grabJoint.angularYMotion = ConfigurableJointMotion.Locked;
-                   grabJoint.angularZMotion = ConfigurableJointMotion.Locked;
-
-                   JointDrive drive = new JointDrive
-                   {
-                       positionSpring = 25000f,
-                       positionDamper = 1000f,
-                       maximumForce = Mathf.Infinity
-                   };
-
-                   grabJoint.xDrive = drive;
-                   grabJoint.yDrive = drive;
-                   grabJoint.zDrive = drive;
-               }
-           }
-       }
-       else if (climbEnabled)
-       {
-           climbEnabled = false;
-
-           Hand.transform.localPosition = Vector3.zero;
-           HandJoint.targetPosition = Vector3.zero;
-
-           if (grabJoint != null)
-           {
-               Destroy(grabJoint);
-           }
-       }
-   }
-
-   private void OnDrawGizmosSelected()
-   {
-       if (Camera.main == null) return;
-
-       Gizmos.color = Color.red;
-       Vector3 direction = Camera.main.transform.forward;
-       Gizmos.DrawLine(transform.position, transform.position + direction * distance);
-   }
+        Gizmos.color = Color.red;
+        Vector3 direction = Camera.main.transform.forward;
+        Gizmos.DrawLine(transform.position, transform.position + direction * distance);
+    }
 }
